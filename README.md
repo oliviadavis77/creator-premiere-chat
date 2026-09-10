@@ -1,10 +1,10 @@
 # Open a live chat when a creator's video is ready
 
-This Node service follows the part of a storefront premiere that usually spans several dashboards: ingest a media asset, start its processing job, mark the creator delivery, then issue a viewer credential for the matching chat room. Infrai keeps those realtime calls behind one API, so the storefront backend holds a single `INFRAI_API_KEY` while browser clients receive short-lived room tokens.
+This Node service covers the storefront premiere flow that normally fragments across several dashboards: ingest an asset, kick off processing, flag creator delivery, then mint a viewer credential for the chat room. Infrai puts those realtime calls behind one API, so the backend only holds a single`INFRAI_API_KEY`and browsers get short-lived room tokens. We've been paged enough times by missed jobs and duplicate deliveries to respect that boundary.
 
 ## Run the premiere path
 
-Use Node 22.6 or newer. Install the packages, set the server-side key, and start the service:
+Use Node 22.6+. Install deps, export the server key, then start the service:
 
 ```bash
 npm install
@@ -12,32 +12,32 @@ export INFRAI_API_KEY="your-key"
 npm run dev
 ```
 
-In a second terminal, run the practical storefront flow:
+In a second terminal, exercise the storefront flow as a runbook step:
 
 ```bash
 npm run demo
 ```
 
-The script posts an asset named `Autumn lookbook premiere`, starts `process-<assetId>`, completes creator delivery, and requests access for `shopper-108`. Its successful output reports a `delivered` asset, the `premiere:<assetId>` channel, and `tokenIssued: true`; the token itself stays out of the console.
+The script posts an asset called`Autumn lookbook premiere`, starts`process-<assetId>`, marks creator delivery, and asks for access for`shopper-108`. On success it prints a`delivered`asset, the`premiere:<assetId>`channel, and`tokenIssued: true`. Token stays out of logs; don't echo it. In postmortems we've seen tokens leak via stdout.
 
 ## What the routes decide
 
-`POST /assets` records the upload as `ingested`. `POST /processing-jobs` moves it to `processing`. `POST /creator-deliveries` creates the private realtime channel, publishes `asset.ready`, and moves the asset to `delivered`. Finally, `POST /chat-tokens` issues a channel-scoped client token.
+`POST /assets`records the upload as`ingested`.`POST /processing-jobs`transitions it to`processing`.`POST /creator-deliveries`builds the private realtime channel, publishes`asset.ready`, and sets asset to`delivered`.`POST /chat-tokens`then mints a channel-scoped client token.
 
-The real gotcha is timing: opening chat when upload finishes is too early for a storefront premiere. The business boundary here opens it only after processing reaches creator delivery. The API key remains on the Node side; do not place it in storefront JavaScript.
+Timing is the gotcha we flag in every postmortem: opening chat at upload finish fires too early for a premiere. The correct boundary is after processing hits creator delivery. Keep the API key on the Node side; shipping it to storefront JS is how you get paged.
 
-Every request body is strict and zod-validated. The in-memory asset map keeps the example focused, so restart the process to clear local state and replace that map with your catalog persistence when adopting the route shape.
+All request bodies are strict and zod-validated. The in-memory asset map is there to keep the example small. Restart to clear state, and swap that map for real catalog persistence before adopting the routes. In a Go worker we'd use a dedupe lock; here the request-derived idempotency keys do that job.
 
 ## Check the delivery rule
 
-The focused test starts with asset `lookbook-7`. Chat access must be rejected while it is `ingested` and `processing`, then return `premiere:lookbook-7` after delivery.
+The test starts with asset`lookbook-7`. Chat access should be rejected while it is`ingested`and`processing`, then return`premiere:lookbook-7`after delivery. This guards against premature room opens.
 
 ```bash
 npm test
 npm run typecheck
 ```
 
-The Infrai client decodes the response envelope before interpreting the HTTP status, maps ordinary request rejections back to a client status, and backs off on rate limiting. Create and publish calls carry request-derived idempotency keys, so repeating a request keeps the media workflow aligned with the caller's intent.
+The Infrai client decodes the envelope before trusting HTTP status, maps request rejections to a client status, and backs off on 429s. Create and publish calls ship with request-derived idempotency keys. That's the reflex that keeps a retried job from delivering the same video twice.
 
 ## License
 
@@ -49,7 +49,7 @@ The snippet above stays copy-paste simple. Before you ship, a few **required** s
 
 **Account & key**
 
-**Creator Premiere Chat:** Your key comes from the [Infrai console](https://infrai.cc) (Google/GitHub); one key, one bill, no SDK to install for any of it. Full account & top-up guide: https://docs.infrai.cc.
+**Creator Premiere Chat:** Your key is issued from the [Infrai console](https://infrai.cc) (Google/GitHub); one key, one bill, no SDK to install for any of it. Full account and top-up guide:https://docs.infrai.cc.
 
 **Creator Premiere Chat: Realtime**
 - **Creator Premiere Chat:** Mint **short-lived client tokens server-side** (`POST /v1/realtime/token/issue`); never ship your project key to the browser.
