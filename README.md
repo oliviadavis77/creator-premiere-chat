@@ -53,3 +53,7 @@ The snippet above stays copy-paste simple. Before you ship, a few **required** s
 
 **Creator Premiere Chat: Realtime**
 - **Creator Premiere Chat:** Mint **short-lived client tokens server-side** (`POST /v1/realtime/token/issue`); never ship your project key to the browser.
+
+## Further reading
+
+- [Go Presence Membership Explained: Connection Evidence for Support Poll Recovery](docs/go-presence-membership-explained-connection-evide-orh5ez.md)
