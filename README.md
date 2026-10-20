@@ -56,4 +56,5 @@ The snippet above stays copy-paste simple. Before you ship, a few **required** s
 
 ## Further reading
 
+- [Node.js Gaming Support Queues: 3 Rules for Live Waiting-Room Position Updates](docs/node-js-gaming-support-queues-3-rules-for-live-wa-17mg2k.md)
 - [Go Presence Membership Explained: Connection Evidence for Support Poll Recovery](docs/go-presence-membership-explained-connection-evide-orh5ez.md)
